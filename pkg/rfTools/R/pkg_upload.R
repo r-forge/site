@@ -79,22 +79,6 @@ rf_release_packages <- function( rfc, release_dir, log_dir, backup_dir = NULL, v
   else
     NULL
   
-  ## MAC BINARIES (not  supported see above)
-  #mac_build_file <- file.path( stmp, gsub("SRC.", "MAC.", btgz) )
-  #res <- utils::untar( mac_build_file, compressed = "gzip", tar = TAR, exdir = stmp )
-  #if (res) {
-  #  stop("unpackaging MAC builds failed.")
-  #}
-
-  ## copy 00install.out, build, and check logs
-  #lapply(pkgs, rf_copy_logs, log_dir = log_dir, build_root = file.path(stmp, src_dir), type = "MacOSX" )
-  ## read check results
-  #file <- file.path(stmp, src_dir, "RF_PKG_CHECK", "check.csv")
-  #results_mac <- if(file.exists(file))
-  #  read.csv(file)
-  #else
-  #  NULL
-  results_mac <- NULL
   
   ## WIN BINARIES
   win_build_file <- file.path( stmp, gsub("SRC.", "WIN.", btgz) )
@@ -117,10 +101,6 @@ rf_release_packages <- function( rfc, release_dir, log_dir, backup_dir = NULL, v
   if( !is.null(results_lin) ){
     p <- as.character(results_lin[["Package"]])
     all_results[p, "Linux"] <- as.character(results_lin[["Status"]])
-  }
-  if( !is.null(results_mac) ){
-    p <- as.character(results_mac[["Package"]])
-    all_results[p, "MacOSX"] <- as.character(results_mac[["Status"]])
   }
   if( !is.null(results_win) ){
     p <- as.character(results_win[["Package"]])
@@ -155,9 +135,9 @@ rf_release_packages <- function( rfc, release_dir, log_dir, backup_dir = NULL, v
   ## Check binary release areas
   .rf_check_package_binary_areas( release_dir )
   
-  ## remove pkgs which fail and flag as failed
+  ## pp: don't remove working version of pkgs which failed but still flag as failed
   pkgs_fail <- pkgs[ !pkgs_ok ]
-  .rf_remove_package_from_release( pkgs_fail, release_dir )
+  #.rf_remove_package_from_release( pkgs_fail, release_dir )
   lapply( pkgs_fail, function(pkg) rf_set_pkg_status( rfc, pkg, status = 3L) )
   
   ## now provide build successes to release area (after deleting old packages)
@@ -168,7 +148,6 @@ rf_release_packages <- function( rfc, release_dir, log_dir, backup_dir = NULL, v
   lapply( pkgs_ok, function(pkg) rf_set_pkg_status( rfc, pkg, status = 0L) )
   
   ## remove build tgz'
-  #file.remove( mac_build_file )
   file.remove( win_build_file )
 
   if( keep ){
@@ -236,20 +215,9 @@ rf_copy_logs <- function(pkg, log_dir, build_root, type = c("Linux", "MacOSX", "
     file.remove( file.path(dirname( area_win ), "latest") )
     file.symlink( basename(area_win), file.path(dirname( area_win ), "latest")  )
   }
-  #if(!file.exists(area_mac)){
-  #  dir.create(area_mac)
-  #  tools::write_PACKAGES( dir = area_mac )
-  #  file.remove( file.path(dirname( area_mac ), "latest") )
-  #  file.symlink( basename(area_mac), file.path(dirname( area_mac ), "latest") )
-  #}
 }
 
 .rf_remove_package_from_release <- function(pkgs, release_dir){
-
-  ## further configuration
-  #commenting to remove MAC repos which require merging to disregard mac builds
-  #file_types <- c(Linux = ".tar.gz", MacOSX = ".tgz", Windows = ".zip")
-  #pkg_types <- c(Linux = "source", MacOSX = "mac.binary", Windows = "win.binary")
   
   file_types <- c(Linux = ".tar.gz", Windows = ".zip")
   pkg_types <- c(Linux = "source", Windows = "win.binary")
@@ -284,19 +252,6 @@ rf_copy_logs <- function(pkg, log_dir, build_root, type = c("Linux", "MacOSX", "
   ## st 2014-04-17: takes too long for many packages and fails in the worst case
   ##write_PACKAGES(dir = contrib.url(release_dir, pkg_type), fields = fields, type = pkg_type)
   
-  ## remove MAC packages
-  #pkgs_rforge_avail_mac <- available.packages(contrib.url(sprintf("file://%s", release_dir), type = "mac.binary.leopard"), filters = "duplicates")
-  #toremove <- which( rownames(pkgs_rforge_avail_mac) %in% pkgs )
-  #files <- file.path(contrib.url(release_dir, type = "mac.binary.leopard"), sprintf("%s_%s.tgz", pkgs_rforge_avail_mac[toremove, "Package"], pkgs_rforge_avail_mac[toremove, "Version"]))
-  #lapply( files, function(file) {if(file.exists(file))
-  #                                 file.remove(file)
-  #                             } )
-  ## write PACKAGES file
-  #platform <- "MacOSX"
-  #file_type <- file_types[platform]
-  #pkg_type <- pkg_types[platform]
-  ## st 2014-04-17: takes too long for many packages and fails in the worst case
-  ###write_PACKAGES(dir = contrib.url(release_dir, "mac.binary.leopard"), fields = fields, type = pkg_type)
 
   invisible(TRUE)
 }
@@ -341,21 +296,6 @@ rf_copy_logs <- function(pkg, log_dir, build_root, type = c("Linux", "MacOSX", "
   pkg_type <- pkg_types[platform]
   ## st 2014-04-17: takes too long for many packages and fails in the worst case
   ##write_PACKAGES(dir = contrib.url(release_dir, pkg_type), fields = fields, type = pkg_type)
-
-
-  ## MAC packages
-  #pkgs_mac_avail <- available.packages(contrib.url(sprintf("file://%s", path), type = "mac.binary.leopard"), filters = "duplicates")
-  #torelease <- which( rownames(pkgs_mac_avail) %in% pkgs )
-  #files <- file.path(contrib.url(path, type = "mac.binary.leopard"), sprintf("%s_%s.tgz", pkgs_mac_avail[torelease, "Package"], pkgs_mac_avail[torelease, "Version"]))
-  #lapply( files, function(file) {if(file.exists(file))
-  #                                 file.copy(file, contrib.url(release_dir, type = "mac.binary.leopard"), copy.mode = FALSE)
-  #                             } )
-  ## write PACKAGES file
-  #platform <- "MacOSX"
-  #file_type <- file_types[platform]
-  #pkg_type <- pkg_types[platform]
-  ## st 2014-04-17: takes too long for many packages and fails in the worst case
-  ###write_PACKAGES(dir = contrib.url(release_dir, "mac.binary.leopard"), fields = fields, type = pkg_type)
 
   invisible(TRUE)
 }
